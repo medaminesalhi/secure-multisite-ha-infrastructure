@@ -1,0 +1,13 @@
+
+---
+nginx_package: nginx
+nginx_service: nginx
+
+nginx_listen_port: 80
+nginx_server_name: "_"
+
+nginx_web_root: /var/www/html
+
+nginx_page_title: "Infrastructure HA"
+nginx_environment: "lab"
+nginx_health_marker: "WEB_OK"

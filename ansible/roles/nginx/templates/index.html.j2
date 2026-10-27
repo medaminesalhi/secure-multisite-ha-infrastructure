@@ -1,0 +1,38 @@
+
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport"
+          content="width=device-width, initial-scale=1">
+
+    <title>{{ nginx_page_title }}</title>
+</head>
+
+<body>
+    <h1>{{ nginx_page_title }}</h1>
+
+    <h2>Informations du serveur</h2>
+
+    <p>
+        Hostname : {{ inventory_hostname }}
+    </p>
+
+    <p>
+        Adresse LAN :
+        {{ private_ip | default('Non definie') }}
+    </p>
+
+    <p>
+        Environnement : {{ nginx_environment }}
+    </p>
+
+    <p>
+        Statut : {{ nginx_health_marker }}
+    </p>
+
+    <p>
+        Deploiement automatise avec Ansible.
+    </p>
+</body>
+</html>

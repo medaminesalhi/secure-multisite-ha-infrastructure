@@ -1,0 +1,71 @@
+
+---
+- name: Install Nginx
+  ansible.builtin.apt:
+    name: "{{ nginx_package }}"
+    state: present
+    update_cache: true
+    cache_valid_time: 3600
+
+- name: Ensure web root directory exists
+  ansible.builtin.file:
+    path: "{{ nginx_web_root }}"
+    state: directory
+    owner: root
+    group: root
+    mode: "0755"
+
+- name: Deploy HTML landing page
+  ansible.builtin.template:
+    src: index.html.j2
+    dest: "{{ nginx_web_root }}/index.html"
+    owner: root
+    group: root
+    mode: "0644"
+
+- name: Deploy Nginx site configuration
+  ansible.builtin.template:
+    src: site.conf.j2
+    dest: /etc/nginx/sites-available/default
+    owner: root
+    group: root
+    mode: "0644"
+    backup: true
+  notify: Reload nginx
+
+- name: Enable Nginx default site
+  ansible.builtin.file:
+    src: /etc/nginx/sites-available/default
+    dest: /etc/nginx/sites-enabled/default
+    state: link
+  notify: Reload nginx
+
+- name: Validate Nginx configuration
+  ansible.builtin.command:
+    cmd: nginx -t
+  changed_when: false
+
+- name: Ensure Nginx is running
+  ansible.builtin.service:
+    name: "{{ nginx_service }}"
+    state: started
+    enabled: true
+
+- name: Apply pending Nginx reloads
+  ansible.builtin.meta: flush_handlers
+
+- name: Verify HTTP response
+  ansible.builtin.uri:
+    url: "http://127.0.0.1:{{ nginx_listen_port }}/"
+    method: GET
+    status_code: 200
+    return_content: true
+    use_proxy: false
+  register: nginx_response
+
+- name: Verify expected page content
+  ansible.builtin.assert:
+    that:
+      - nginx_health_marker in nginx_response.content
+    success_msg: "Nginx HTTP validation passed."
+    fail_msg: "Nginx does not return the expected page."
