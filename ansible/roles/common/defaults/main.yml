@@ -1,0 +1,10 @@
+
+---
+common_packages:
+  - ca-certificates
+  - curl
+  - git
+  - vim
+  - htop
+  - dnsutils
+  - iproute2

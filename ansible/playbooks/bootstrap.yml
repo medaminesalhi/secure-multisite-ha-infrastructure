@@ -1,0 +1,9 @@
+
+---
+- name: Bootstrap Linux infrastructure
+  hosts: all
+  become: true
+  gather_facts: true
+
+  roles:
+    - common
