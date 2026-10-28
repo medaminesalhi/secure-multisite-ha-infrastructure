@@ -34,3 +34,16 @@ backend web_backend
 {% for server in haproxy_backend_servers %}
     server {{ server.name }} {{ server.address }}:{{ server.port }} check
 {% endfor %}
+
+{% if haproxy_stats_enabled | bool %}
+
+frontend stats_frontend
+    bind {{ haproxy_stats_bind_address }}:{{ haproxy_stats_port }}
+    mode http
+
+    stats enable
+    stats uri {{ haproxy_stats_uri }}
+    stats refresh {{ haproxy_stats_refresh }}
+    stats hide-version
+
+{% endif %}

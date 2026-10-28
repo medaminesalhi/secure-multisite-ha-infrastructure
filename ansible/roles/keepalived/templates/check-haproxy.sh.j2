@@ -1,0 +1,8 @@
+
+#!/bin/sh
+
+# Check whether the HAProxy service is active.
+# Exit 0: service active.
+# Exit non-zero: service inactive.
+
+exec /usr/bin/systemctl is-active --quiet {{ keepalived_monitored_service }}

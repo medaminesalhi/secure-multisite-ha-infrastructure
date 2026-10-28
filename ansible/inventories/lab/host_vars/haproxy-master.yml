@@ -1,0 +1,7 @@
+
+---
+keepalived_priority: 150
+
+keepalived_source_ip: "{{ private_ip }}"
+
+keepalived_peer_ip: "{{ hostvars['haproxy-backup']['private_ip'] }}"

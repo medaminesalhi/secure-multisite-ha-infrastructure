@@ -1,6 +1,16 @@
 
 ---
+# HAProxy backend
 haproxy_backend_servers:
   - name: student_web
     address: "{{ hostvars['web-server']['private_ip'] }}"
     port: 80
+
+# Keepalived common configuration
+keepalived_interface: enp0s8
+
+keepalived_virtual_ip: "10.0.2.100"
+keepalived_virtual_prefix: 24
+
+keepalived_virtual_router_id: 51
+keepalived_advert_interval: 1

@@ -1,0 +1,44 @@
+
+global_defs {
+    router_id {{ inventory_hostname | replace('-', '_') }}
+    enable_script_security
+}
+
+vrrp_script chk_haproxy {
+    script "{{ keepalived_check_script_path }}"
+
+    interval 2
+    timeout 2
+
+    fall 2
+    rise 2
+
+    weight 0
+    user root
+}
+
+vrrp_instance {{ keepalived_instance_name }} {
+    state BACKUP
+
+    interface {{ keepalived_interface }}
+
+    virtual_router_id {{ keepalived_virtual_router_id }}
+    priority {{ keepalived_priority }}
+    advert_int {{ keepalived_advert_interval }}
+
+    unicast_src_ip {{ keepalived_source_ip }}
+
+    check_unicast_src
+
+    unicast_peer {
+        {{ keepalived_peer_ip }}
+    }
+
+    virtual_ipaddress {
+        {{ keepalived_virtual_ip }}/{{ keepalived_virtual_prefix }} dev {{ keepalived_interface }}
+    }
+
+    track_script {
+        chk_haproxy
+    }
+}

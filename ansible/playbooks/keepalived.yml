@@ -1,0 +1,10 @@
+
+---
+- name: Configure HAProxy high availability with Keepalived
+  hosts: loadbalancers
+  become: true
+  gather_facts: true
+
+  roles:
+    - keepalived
+
