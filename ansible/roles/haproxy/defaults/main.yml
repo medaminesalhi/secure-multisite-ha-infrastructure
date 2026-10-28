@@ -1,0 +1,12 @@
+
+---
+haproxy_package: haproxy
+haproxy_service: haproxy
+
+haproxy_bind_address: "0.0.0.0"
+haproxy_frontend_port: 80
+
+haproxy_health_path: "/health/ready"
+haproxy_health_status: 200
+
+haproxy_backend_servers: []

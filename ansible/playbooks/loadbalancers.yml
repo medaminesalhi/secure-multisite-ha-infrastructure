@@ -1,0 +1,9 @@
+
+---
+- name: Configure HTTP load balancers
+  hosts: loadbalancers
+  become: true
+  gather_facts: true
+
+  roles:
+    - haproxy

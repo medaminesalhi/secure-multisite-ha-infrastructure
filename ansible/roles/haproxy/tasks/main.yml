@@ -1,0 +1,47 @@
+
+---
+- name: Validate HAProxy configuration variables
+  ansible.builtin.assert:
+    that:
+      - haproxy_backend_servers | length > 0
+      - haproxy_frontend_port | int > 0
+      - haproxy_frontend_port | int <= 65535
+    fail_msg: "Invalid HAProxy configuration."
+
+- name: Install HAProxy
+  ansible.builtin.apt:
+    name: "{{ haproxy_package }}"
+    state: present
+    update_cache: true
+    cache_valid_time: 3600
+
+- name: Deploy HAProxy configuration
+  ansible.builtin.template:
+    src: haproxy.cfg.j2
+    dest: /etc/haproxy/haproxy.cfg
+    owner: root
+    group: root
+    mode: "0644"
+    backup: true
+    validate: "/usr/sbin/haproxy -c -f %s"
+  notify: Reload HAProxy
+
+- name: Ensure HAProxy service is running
+  ansible.builtin.service:
+    name: "{{ haproxy_service }}"
+    state: started
+    enabled: true
+
+- name: Apply pending HAProxy reload
+  ansible.builtin.meta: flush_handlers
+
+- name: Verify application through HAProxy
+  ansible.builtin.uri:
+    url: "http://127.0.0.1:{{ haproxy_frontend_port }}/health/ready"
+    method: GET
+    status_code: 200
+    use_proxy: false
+  register: haproxy_result
+  retries: 5
+  delay: 2
+  until: haproxy_result.status == 200

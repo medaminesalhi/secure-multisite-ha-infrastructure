@@ -1,0 +1,6 @@
+
+---
+haproxy_backend_servers:
+  - name: student_web
+    address: "{{ hostvars['web-server']['private_ip'] }}"
+    port: 80
