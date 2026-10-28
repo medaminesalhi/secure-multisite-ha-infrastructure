@@ -4,8 +4,7 @@
   ansible.builtin.assert:
     that:
       - vault_mysql_app_password is defined
-      - vault_mysql_app_salt is defined
-    fail_msg: "MySQL Vault secrets are missing or invalid."
+    fail_msg: "MySQL application password is missing or too short."
   no_log: true
 
 - name: Install MySQL server and Python connector
@@ -55,9 +54,8 @@
     host: "{{ mysql_app_allowed_host }}"
     plugin: caching_sha2_password
     plugin_auth_string: "{{ vault_mysql_app_password }}"
-    salt: "{{ vault_mysql_app_salt }}"
     priv: "{{ mysql_database_name }}.*:SELECT,INSERT,UPDATE,DELETE"
-    update_password: always
+    update_password: on_create
     state: present
     login_unix_socket: "{{ mysql_socket }}"
     config_file: ""
