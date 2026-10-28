@@ -1,0 +1,9 @@
+
+---
+- name: Configure database infrastructure
+  hosts: databases
+  become: true
+  gather_facts: true
+
+  roles:
+    - mysql

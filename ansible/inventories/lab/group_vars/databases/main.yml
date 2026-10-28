@@ -1,0 +1,11 @@
+
+---
+mysql_bind_address: "{{ private_ip }}"
+
+mysql_port: 3306
+
+mysql_database_name: infrastructure_db
+
+mysql_app_username: infrastructure_app
+
+mysql_app_allowed_host: "10.0.2.7"

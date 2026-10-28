@@ -1,0 +1,64 @@
+
+---
+- name: Verify required MySQL secrets
+  ansible.builtin.assert:
+    that:
+      - vault_mysql_app_password is defined
+      - vault_mysql_app_salt is defined
+    fail_msg: "MySQL Vault secrets are missing or invalid."
+  no_log: true
+
+- name: Install MySQL server and Python connector
+  ansible.builtin.apt:
+    name: "{{ mysql_packages }}"
+    state: present
+    update_cache: true
+    cache_valid_time: 3600
+
+- name: Ensure MySQL service is running
+  ansible.builtin.service:
+    name: "{{ mysql_service_name }}"
+    state: started
+    enabled: true
+
+- name: Deploy MySQL server configuration
+  ansible.builtin.template:
+    src: server.cnf.j2
+    dest: /etc/mysql/mysql.conf.d/zz-ansible.cnf
+    owner: root
+    group: root
+    mode: "0644"
+  notify: Restart MySQL
+
+- name: Apply pending MySQL restart
+  ansible.builtin.meta: flush_handlers
+
+- name: Wait for MySQL TCP listener
+  ansible.builtin.wait_for:
+    host: "{{ mysql_bind_address }}"
+    port: "{{ mysql_port }}"
+    state: started
+    timeout: 30
+
+- name: Create application database
+  ansible.mysql.mysql_db:
+    name: "{{ mysql_database_name }}"
+    encoding: utf8mb4
+    collation: utf8mb4_unicode_ci
+    state: present
+    login_unix_socket: "{{ mysql_socket }}"
+    config_file: ""
+
+- name: Create restricted application user
+  ansible.mysql.mysql_user:
+    name: "{{ mysql_app_username }}"
+    host: "{{ mysql_app_allowed_host }}"
+    plugin: caching_sha2_password
+    plugin_auth_string: "{{ vault_mysql_app_password }}"
+    salt: "{{ vault_mysql_app_salt }}"
+    priv: "{{ mysql_database_name }}.*:SELECT,INSERT,UPDATE,DELETE"
+    update_password: always
+    state: present
+    login_unix_socket: "{{ mysql_socket }}"
+    config_file: ""
+  no_log: true
