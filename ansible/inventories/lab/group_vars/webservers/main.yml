@@ -1,0 +1,12 @@
+
+---
+student_db_host: "{{ hostvars[groups['databases'][0]]['private_ip'] }}"
+student_db_port: 3306
+
+student_db_name: infrastructure_db
+student_db_user: infrastructure_app
+
+student_db_password: "{{ hostvars[groups['databases'][0]]['vault_mysql_app_password'] }}"
+
+nginx_proxy_enabled: true
+nginx_upstream_port: 8000

@@ -1,0 +1,28 @@
+
+[Unit]
+Description=Student Manager FastAPI Application
+Wants=network-online.target
+After=network-online.target
+
+[Service]
+Type=simple
+
+User={{ student_app_user }}
+Group={{ student_app_group }}
+
+WorkingDirectory={{ student_app_root }}
+
+EnvironmentFile=/etc/student-manager/student-manager.env
+
+ExecStart={{ student_app_root }}/.venv/bin/uvicorn app.main:app --host 127.0.0.1 --port {{ student_app_port }} --workers 1
+
+Restart=on-failure
+RestartSec=3
+
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+
+[Install]
+WantedBy=multi-user.target

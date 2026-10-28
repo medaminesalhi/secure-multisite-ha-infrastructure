@@ -1,0 +1,15 @@
+
+---
+student_app_name: student-manager
+
+student_app_user: studentapp
+student_app_group: studentapp
+
+student_app_root: /opt/student-manager
+student_app_port: 8000
+
+student_app_packages:
+  - python3
+  - python3-venv
+  - python3-pip
+  - python3-setuptools

@@ -1,0 +1,120 @@
+
+---
+- name: Verify application configuration
+  ansible.builtin.assert:
+    that:
+      - student_db_host is defined
+      - student_db_password is defined
+    fail_msg: "Missing or invalid database configuration."
+  no_log: true
+
+- name: Install Python system dependencies
+  ansible.builtin.apt:
+    name: "{{ student_app_packages }}"
+    state: present
+    update_cache: true
+    cache_valid_time: 3600
+
+- name: Create application group
+  ansible.builtin.group:
+    name: "{{ student_app_group }}"
+    system: true
+
+- name: Create application user
+  ansible.builtin.user:
+    name: "{{ student_app_user }}"
+    group: "{{ student_app_group }}"
+    system: true
+    shell: /usr/sbin/nologin
+    create_home: false
+
+- name: Create application directories
+  ansible.builtin.file:
+    path: "{{ item }}"
+    state: directory
+    owner: root
+    group: root
+    mode: "0755"
+  loop:
+    - "{{ student_app_root }}"
+    - "{{ student_app_root }}/app"
+    - "{{ student_app_root }}/app/templates"
+
+- name: Create configuration directory
+  ansible.builtin.file:
+    path: /etc/student-manager
+    state: directory
+    owner: root
+    group: "{{ student_app_group }}"
+    mode: "0750"
+
+- name: Deploy Python requirements
+  ansible.builtin.copy:
+    src: "{{ playbook_dir }}/../../apps/student-manager/requirements.txt"
+    dest: "{{ student_app_root }}/requirements.txt"
+    owner: root
+    group: root
+    mode: "0644"
+  notify: Restart student manager
+
+- name: Deploy application source code
+  ansible.builtin.copy:
+    src: "{{ playbook_dir }}/../../apps/student-manager/{{ item }}"
+    dest: "{{ student_app_root }}/{{ item }}"
+    owner: root
+    group: root
+    mode: "0644"
+  loop:
+    - app/__init__.py
+    - app/main.py
+    - app/database.py
+    - app/templates/index.html
+  notify: Restart student manager
+
+- name: Install application Python dependencies
+  ansible.builtin.pip:
+    requirements: "{{ student_app_root }}/requirements.txt"
+    virtualenv: "{{ student_app_root }}/.venv"
+    virtualenv_command: /usr/bin/python3 -m venv
+    state: present
+  notify: Restart student manager
+
+- name: Deploy database environment configuration
+  ansible.builtin.template:
+    src: student-manager.env.j2
+    dest: /etc/student-manager/student-manager.env
+    owner: root
+    group: "{{ student_app_group }}"
+    mode: "0640"
+  no_log: true
+  notify: Restart student manager
+
+- name: Deploy systemd service
+  ansible.builtin.template:
+    src: student-manager.service.j2
+    dest: "/etc/systemd/system/{{ student_app_name }}.service"
+    owner: root
+    group: root
+    mode: "0644"
+  notify: Restart student manager
+
+- name: Start and enable Student Manager
+  ansible.builtin.systemd_service:
+    name: "{{ student_app_name }}"
+    state: started
+    enabled: true
+    daemon_reload: true
+
+- name: Apply pending application restart
+  ansible.builtin.meta: flush_handlers
+
+- name: Verify database readiness
+  ansible.builtin.uri:
+    url: "http://127.0.0.1:{{ student_app_port }}/health/ready"
+    status_code: 200
+    return_content: true
+    use_proxy: false
+  register: student_health
+  retries: 5
+  delay: 2
+  until: student_health.status == 200
