@@ -1,6 +1,6 @@
 
 ---
-- name: Configure web infrastructure
+- name: Configure  nginx web servers
   hosts: webservers
   become: true
   gather_facts: true

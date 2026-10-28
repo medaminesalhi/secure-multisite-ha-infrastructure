@@ -1,95 +1,99 @@
 
-import os
+from pathlib import Path
+from typing import Annotated
 
 import pymysql
-from pymysql.cursors import DictCursor
+
+from fastapi import FastAPI, Form, HTTPException, Request
+from fastapi.responses import HTMLResponse, RedirectResponse
+from fastapi.templating import Jinja2Templates
+
+from app.database import (
+    add_student,
+    get_connection,
+    get_students,
+)
 
 
-def get_connection():
-    """Create a connection to the MySQL database."""
+# Application ASGI chargée par Uvicorn
+app = FastAPI(
+    title="Student Manager",
+    description="Simple student management application",
+    version="1.0.0",
+)
 
-    required_variables = [
-        "DB_HOST",
-        "DB_NAME",
-        "DB_USER",
-        "DB_PASSWORD",
-    ]
+# Chemin du dossier contenant main.py
+BASE_DIR = Path(__file__).resolve().parent
 
-    for variable in required_variables:
-        if not os.getenv(variable):
-            raise RuntimeError(
-                f"Missing environment variable: {variable}"
-            )
+# Configuration des templates HTML
+templates = Jinja2Templates(
+    directory=str(BASE_DIR / "templates")
+)
 
-    return pymysql.connect(
-        host=os.environ["DB_HOST"],
-        port=int(os.getenv("DB_PORT", "3306")),
-        user=os.environ["DB_USER"],
-        password=os.environ["DB_PASSWORD"],
-        database=os.environ["DB_NAME"],
-        charset="utf8mb4",
-        cursorclass=DictCursor,
-        connect_timeout=5,
-        read_timeout=5,
-        write_timeout=5,
-        autocommit=False,
+
+@app.get("/", response_class=HTMLResponse)
+def home(request: Request):
+    """Display students from MySQL."""
+
+    students = get_students()
+
+    return templates.TemplateResponse(
+        request=request,
+        name="index.html",
+        context={"students": students},
     )
 
 
-def get_students():
-    """Return all students from MySQL."""
-
-    connection = get_connection()
+@app.post("/students")
+def create_student(
+    full_name: Annotated[
+        str,
+        Form(min_length=1, max_length=100),
+    ],
+):
+    """Insert a new student into MySQL."""
 
     try:
-        with connection.cursor() as cursor:
-            cursor.execute(
-                """
-                SELECT id, full_name, created_at
-                FROM students
-                ORDER BY id DESC
-                """
-            )
+        add_student(full_name)
 
-            students = cursor.fetchall()
+    except ValueError as error:
+        raise HTTPException(
+            status_code=400,
+            detail=str(error),
+        ) from error
 
-        return students
-
-    finally:
-        connection.close()
+    return RedirectResponse(
+        url="/",
+        status_code=303,
+    )
 
 
-def add_student(full_name: str):
-    """Insert a student and return its ID."""
+@app.get("/health/live")
+def liveness():
+    """Check if FastAPI is running."""
 
-    full_name = full_name.strip()
+    return {"status": "alive"}
 
-    if not full_name or len(full_name) > 100:
-        raise ValueError(
-            "Student name must contain 1 to 100 characters."
+
+@app.get("/health/ready")
+def readiness():
+    """Check database connectivity."""
+
+    try:
+        connection = get_connection()
+
+        try:
+            with connection.cursor() as cursor:
+                cursor.execute("SELECT 1")
+                cursor.fetchone()
+
+        finally:
+            connection.close()
+
+    except (pymysql.MySQLError, OSError, RuntimeError):
+        raise HTTPException(
+            status_code=503,
+            detail="Database unavailable",
         )
 
-    connection = get_connection()
-
-    try:
-        with connection.cursor() as cursor:
-            cursor.execute(
-                """
-                INSERT INTO students (full_name)
-                VALUES (%s)
-                """,
-                (full_name,),
-            )
-
-            new_student_id = cursor.lastrowid
-
-        connection.commit()
-
-        return new_student_id
-
-    except Exception:
-        connection.rollback()
-        raise
-
-    finally:
-        connection.close()
+    return {"status": "ready"}

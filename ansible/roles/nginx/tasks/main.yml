@@ -15,15 +15,16 @@
     group: root
     mode: "0755"
 
-- name: Deploy HTML landing page
+- name: Deploy static HTML page
   ansible.builtin.template:
     src: index.html.j2
     dest: "{{ nginx_web_root }}/index.html"
     owner: root
     group: root
     mode: "0644"
+  when: not (nginx_proxy_enabled | bool)
 
-- name: Deploy Nginx site configuration
+- name: Deploy Nginx configuration
   ansible.builtin.template:
     src: site.conf.j2
     dest: /etc/nginx/sites-available/default
@@ -45,13 +46,13 @@
     cmd: nginx -t
   changed_when: false
 
-- name: Ensure Nginx is running
+- name: Ensure Nginx service is running
   ansible.builtin.service:
     name: "{{ nginx_service }}"
     state: started
     enabled: true
 
-- name: Apply pending Nginx reloads
+- name: Apply pending Nginx reload
   ansible.builtin.meta: flush_handlers
 
 - name: Verify HTTP response
@@ -62,10 +63,21 @@
     return_content: true
     use_proxy: false
   register: nginx_response
+  retries: 5
+  delay: 2
+  until: nginx_response.status == 200
 
-- name: Verify expected page content
+- name: Verify Student Manager response
+  ansible.builtin.assert:
+    that:
+      - "'Student Manager' in nginx_response.content"
+    fail_msg: "Application response not found."
+    success_msg: "Student Manager is accessible through Nginx."
+  when: nginx_proxy_enabled | bool
+
+- name: Verify static HTML response
   ansible.builtin.assert:
     that:
       - nginx_health_marker in nginx_response.content
-    success_msg: "Nginx HTTP validation passed."
-    fail_msg: "Nginx does not return the expected page."
+    fail_msg: "Static HTML response is invalid."
+  when: not (nginx_proxy_enabled | bool)

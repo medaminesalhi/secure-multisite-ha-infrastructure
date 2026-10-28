@@ -11,3 +11,7 @@ nginx_web_root: /var/www/html
 nginx_page_title: "Infrastructure HA"
 nginx_environment: "lab"
 nginx_health_marker: "WEB_OK"
+
+nginx_proxy_enabled: false
+nginx_upstream_port: 8000
+
